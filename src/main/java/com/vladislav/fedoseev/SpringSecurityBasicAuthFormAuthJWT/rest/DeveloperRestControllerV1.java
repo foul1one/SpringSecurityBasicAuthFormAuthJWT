@@ -1,6 +1,7 @@
 package com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.rest;
 
 import com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.model.Developer;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,23 +19,27 @@ public class DeveloperRestControllerV1 {
     ).collect(Collectors.toList());
 
     @GetMapping
+    @PreAuthorize("hasAuthority('developers:read')") // с помощью данной аннотации мы указываем тех у кого есть данное право доступа
     public List<Developer> getAll() {
         return DEVELOPERS;
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('developers:read')")
     public Developer getById(@PathVariable Long id) {
         return DEVELOPERS.stream().filter(developer -> developer.getId().equals(id))
                 .findFirst().orElse(null);
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('developers:write')")
     public Developer create(@RequestBody Developer developer) {
         this.DEVELOPERS.add(developer);
         return developer;
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('developers:write')")
     public List<Developer> deleteById(@PathVariable Long id) {
         this.DEVELOPERS.removeIf(developer -> developer.getId().equals(id));
         return DEVELOPERS;
