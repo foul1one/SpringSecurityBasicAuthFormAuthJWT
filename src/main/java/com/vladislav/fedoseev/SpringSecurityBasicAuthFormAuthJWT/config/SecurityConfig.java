@@ -12,6 +12,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration // помечаем что класс является конфигурационным
 @EnableWebSecurity // включаем web security
@@ -28,21 +30,19 @@ public class SecurityConfig {
                 .csrf().disable() // отключаем csrf
                 .authorizeHttpRequests() // начинаем настройку запросов, которые требуют авторизации
                 .requestMatchers("/").permitAll() // к корню проекта доступ имеют все и пользователи и не пользователи системы
-                // ко всем GET запросам по адресу, который начинается с "/api", имеют доступ юзеры со следующими ролями
-//                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(Role.ADMIN.name(), Role.USER.name())
-
-                // К POST и DELETE запросам, которые начинаются с "/api", доступ имеет только юзер с ролью админ
-//                .requestMatchers(HttpMethod.POST, "/api/**").hasRole(Role.ADMIN.name())
-//                .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole(Role.ADMIN.name())
-
-                // Теперь мы настраиваем через права доступа, которые есть у ролей, если настроенно в контроллере аннотацией @PreAuthorize, то это не нужно
-//                .requestMatchers(HttpMethod.GET, "/api/**").hasAuthority(Permission.DEVELOPERS_READ.getPermission())
-//                .requestMatchers(HttpMethod.POST, "/api/**").hasAuthority(Permission.DEVELOPERS_WRITE.getPermission())
-//                .requestMatchers(HttpMethod.DELETE, "/api/**").hasAuthority(Permission.DEVELOPERS_WRITE.getPermission())
                 .anyRequest() // каждый запрос
                 .authenticated() // должен быть аутентифицирован
                 .and()
-                .httpBasic(); // аутентификация через http basic
+                .formLogin() // аутентификация через форму
+                .loginPage("/auth/login").permitAll() // здесь мы указываем путь по которому можно получить страницу аутентификации и говорим это открытый енд поинт, иначе будет ошибка
+                .defaultSuccessUrl("/auth/success") // здесь мы указываем стандартную страницу успешной аутентификации, получаем эти страницы через контроллер (обычный, не рест)
+                .and()
+                .logout() // настраиваем логаут
+                .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "POST")) // указываем путь и метод для логаута
+                .invalidateHttpSession(true) // анулируем текущую сессию
+                .clearAuthentication(true) // очищаем текущую аутентификацию
+                .deleteCookies("JSESSIONID") // очищаем куки
+                .logoutSuccessUrl("/auth/login"); // при успешном логауте перенаправляем по пути
         return http.build();
     }
 
