@@ -1,10 +1,8 @@
 package com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.config;
 
-import com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.model.Permission;
 import com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.model.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
