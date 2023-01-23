@@ -1,23 +1,31 @@
 package com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.config;
 
-import com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.model.Role;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration // помечаем что класс является конфигурационным
 @EnableWebSecurity // включаем web security
-@EnableMethodSecurity // чтобы права доступа работали в контролере через аннотаицю @PreAuthorize, нужно добавить эту аннотацию
+@EnableMethodSecurity
+// чтобы права доступа работали в контролере через аннотаицю @PreAuthorize, нужно добавить эту аннотацию
 public class SecurityConfig {
+
+    private final UserDetailsService userDetailsService;
+
+    public SecurityConfig(@Qualifier("userDetailServiceImpl") UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
 
     // начиная с версси секьюрити 5.7.0 конфигурация осуществляется не через наследование класса WebSecurityConfigurerAdapter
     // а через создание бина SecurityFilterChain, в котором мы настраиваем HttpSecurity
@@ -45,31 +53,20 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Здесь мы создаем бин UserDetailsService, с помощью данного бина я получаю доступ к хранилищу юзеров
-    // В данном случае я буду хранить юзеров в памяти приложения, то есть In Memory
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return new InMemoryUserDetailsManager(
-                User.builder()
-                        .username("admin")
-                        .password(passwordEncoder().encode("admin")) // здесь мы шифруем наш пароль через BCrypt
-//                        .roles(Role.ADMIN.name()) тут мы указывали роль
-//                        Теперь мы указываем права доступа роли
-                        .authorities(Role.ADMIN.getAuthorities())
-                        .build(),
-                User.builder()
-                        .username("user")
-                        .password(passwordEncoder().encode("user"))
-                        .authorities(Role.USER.getAuthorities())
-                        .build()
-        );
-    }
-
     // Этот бин отвечает за кодировку пароля по алгоритму BCrypt
     // Декодировать защированную этим алгоритмом строку практически невозможно
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
+    }
+
+    // Настраиваеи бин менеджера авторизации
+    @Bean
+    public AuthenticationManager daoAuthenticationProvider() {
+        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(); // создали класс поставщика данных с БД и работы с ними
+        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder()); // положили в него енкодер пароля
+        daoAuthenticationProvider.setUserDetailsService(userDetailsService); // добавили внутрь userDetailsService
+        return new ProviderManager(daoAuthenticationProvider); // создаем менеджера авторизации и кладем в него нашего поставщика
     }
 
 }
