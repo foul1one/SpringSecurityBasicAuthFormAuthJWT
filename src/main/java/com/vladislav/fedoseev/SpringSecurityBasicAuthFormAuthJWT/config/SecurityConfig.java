@@ -1,6 +1,7 @@
 package com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.config;
 
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.security.JwtConfigurer;
+import com.vladislav.fedoseev.SpringSecurityBasicAuthFormAuthJWT.security.UserDetailsServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -9,11 +10,10 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration // помечаем что класс является конфигурационным
 @EnableWebSecurity // включаем web security
@@ -21,9 +21,10 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 // чтобы права доступа работали в контролере через аннотаицю @PreAuthorize, нужно добавить эту аннотацию
 public class SecurityConfig {
 
-    private final UserDetailsService userDetailsService;
-
-    public SecurityConfig(@Qualifier("userDetailServiceImpl") UserDetailsService userDetailsService) {
+    private final JwtConfigurer jwtConfigurer;
+    private final UserDetailsServiceImpl userDetailsService;
+    public SecurityConfig (JwtConfigurer jwtConfigurer, UserDetailsServiceImpl userDetailsService) {
+        this.jwtConfigurer = jwtConfigurer;
         this.userDetailsService = userDetailsService;
     }
 
@@ -35,21 +36,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf().disable() // отключаем csrf
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // отключаем сессии
+                .and()
                 .authorizeHttpRequests() // начинаем настройку запросов, которые требуют авторизации
                 .requestMatchers("/").permitAll() // к корню проекта доступ имеют все и пользователи и не пользователи системы
+                .requestMatchers("/api/v1/auth/login").permitAll()
                 .anyRequest() // каждый запрос
                 .authenticated() // должен быть аутентифицирован
                 .and()
-                .formLogin() // аутентификация через форму
-                .loginPage("/auth/login").permitAll() // здесь мы указываем путь по которому можно получить страницу аутентификации и говорим это открытый енд поинт, иначе будет ошибка
-                .defaultSuccessUrl("/auth/success") // здесь мы указываем стандартную страницу успешной аутентификации, получаем эти страницы через контроллер (обычный, не рест)
-                .and()
-                .logout() // настраиваем логаут
-                .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "POST")) // указываем путь и метод для логаута
-                .invalidateHttpSession(true) // анулируем текущую сессию
-                .clearAuthentication(true) // очищаем текущую аутентификацию
-                .deleteCookies("JSESSIONID") // очищаем куки
-                .logoutSuccessUrl("/auth/login"); // при успешном логауте перенаправляем по пути
+                .apply(jwtConfigurer); // применяем настройки которые прописаны в этом jwtConfigurer
         return http.build();
     }
 
@@ -60,7 +55,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
-    // Настраиваеи бин менеджера авторизации
+    // Создаем бин AuthenticationManager
     @Bean
     public AuthenticationManager daoAuthenticationProvider() {
         DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(); // создали класс поставщика данных с БД и работы с ними
