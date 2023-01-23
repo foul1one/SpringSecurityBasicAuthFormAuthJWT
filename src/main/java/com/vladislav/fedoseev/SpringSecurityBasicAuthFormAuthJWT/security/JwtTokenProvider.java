@@ -50,8 +50,8 @@ public class JwtTokenProvider {
                 .setClaims(claims) // добавляем claims
                 .setIssuedAt(now) // указываем дату и время создания токена
                 .setExpiration(validity) // указываем дату и время до которого токен валиден
-                .signWith(SignatureAlgorithm.HS256, secretKey) // указываем алгоритм шифрования и секретный ключ, здесь падаем потому что библеотека
-                // не умеет работать с jdk 19 и не может найти класс DatatypeConverter, так как путь к нему поменялся
+                .signWith(SignatureAlgorithm.HS256, secretKey) // указываем алгоритм шифрования и секретный ключ, чтобы эта часть не падала пришлось
+                // подключить зависимость jaxb-api
                 .compact();
     }
 
